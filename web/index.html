@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>雨霖量化 - 量化选股工作台</title>
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#2a3341;
+  --text:#e6edf3; --muted:#8b949e; --up:#f85149; --down:#3fb950;
+  --accent:#58a6ff; --gold:#d29922; --purple:#a371f7;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;font-size:13px;line-height:1.5}
+.app{display:flex;flex-direction:column;min-height:100vh}
+/* 顶栏 */
+.topbar{height:52px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:20px;flex-shrink:0}
+.logo{font-size:17px;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:8px;white-space:nowrap}
+.logo .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.topnav{display:flex;gap:4px;flex:1}
+.topnav button{background:transparent;border:none;color:var(--muted);padding:8px 16px;border-radius:6px;cursor:pointer;font-size:14px;transition:.15s;white-space:nowrap}
+.topnav button:hover{background:var(--panel2);color:var(--text)}
+.topnav button.active{background:rgba(88,166,255,.15);color:var(--accent);font-weight:600}
+.balance{display:flex;align-items:center;gap:6px;color:var(--gold);font-weight:600;white-space:nowrap}
+.balance .coin{width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#f0b429,#d29922);display:inline-block}
+.user-chip{background:var(--panel2);border:1px solid var(--border);padding:5px 12px;border-radius:16px;color:var(--muted)}
+/* 内容 */
+.content{flex:1;padding:18px 20px;overflow:auto}
+.tabpage{display:none}.tabpage.active{display:block}
+/* 网格 */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:15px}
+.card h3{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card h3 .bar{width:3px;height:13px;background:var(--accent);border-radius:2px}
+.row{display:flex;align-items:center;gap:10px}.between{display:flex;align-items:center;justify-content:space-between}
+.muted{color:var(--muted)}.up{color:var(--up)}.down{color:var(--down)}
+.big{font-size:22px;font-weight:700}
+.btn{background:var(--accent);color:#fff;border:none;padding:8px 18px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+.btn:hover{filter:brightness(1.1)}.btn.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--border)}
+.btn.sm{padding:4px 10px;font-size:12px}
+/* 涨跌分布条 */
+.dist{display:flex;height:9px;border-radius:5px;overflow:hidden;gap:1px;margin:8px 0}
+.dist div{height:100%}
+.dist-labels{display:flex;justify-content:space-between;font-size:11px;flex-wrap:wrap;gap:6px}
+/* 表格 */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{color:var(--muted);font-weight:500;text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:9px 6px;border-bottom:1px solid rgba(42,51,65,.5);white-space:nowrap}
+tr:hover td{background:var(--panel2)}
+.code{color:var(--muted);font-size:11px}
+.tag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;background:rgba(88,166,255,.15);color:var(--accent)}
+.tag.red{background:rgba(248,81,73,.15);color:var(--up)}.tag.green{background:rgba(63,185,80,.15);color:var(--down)}
+/* 板块条 */
+.sector{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px}
+.sector .name{width:70px;color:var(--text)}.sector .bar{flex:1;height:6px;background:var(--panel2);border-radius:3px;overflow:hidden}
+.sector .bar i{display:block;height:100%;border-radius:3px}.sector .val{width:52px;text-align:right}
+/* 选股条件 */
+.cond{background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:12px;color:var(--muted);font-size:12px;line-height:1.8}
+.cond b{color:var(--text)}
+select,input[type=text]{background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:5px;font-size:12px;outline:none}
+/* K线占位 */
+.chart{height:200px;background:linear-gradient(180deg,rgba(88,166,255,.05),transparent);border-radius:6px;position:relative;overflow:hidden}
+.chart svg{width:100%;height:100%}
+/* 预警项 */
+.alert-item{padding:10px 0;border-bottom:1px solid var(--border)}
+.alert-item .top{display:flex;justify-content:space-between;align-items:center}
+.alert-item .meta{color:var(--muted);font-size:11px;margin-top:3px}
+/* AI 对话 */
+.ai-layout{display:flex;height:calc(100vh - 130px);gap:14px}
+.ai-side{width:230px;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px;flex-shrink:0;overflow:auto}
+.ai-side button{display:block;width:100%;text-align:left;background:transparent;border:none;color:var(--muted);padding:8px;border-radius:5px;cursor:pointer;font-size:12px}
+.ai-side button:hover,.ai-side button.active{background:var(--panel2);color:var(--text)}
+.ai-main{flex:1;background:var(--panel);border:1px solid var(--border);border-radius:8px;display:flex;flex-direction:column;overflow:hidden}
+.ai-msgs{flex:1;padding:18px;overflow:auto}
+.msg{margin-bottom:16px;padding:12px 14px;border-radius:8px;max-width:85%;line-height:1.7}
+.msg.user{background:rgba(88,166,255,.15);margin-left:auto}
+.msg.ai{background:var(--panel2)}
+.msg h4{color:var(--accent);font-size:12px;margin-bottom:6px}
+.ai-input{border-top:1px solid var(--border);padding:12px;display:flex;gap:10px}
+.ai-input input{flex:1;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:6px;outline:none}
+/* 盯盘 */
+.watch-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px}
+.toggle{width:36px;height:20px;background:var(--border);border-radius:10px;position:relative;cursor:pointer;transition:.2s}
+.toggle.on{background:var(--accent)}.toggle i{position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:.2s}
+.toggle.on i{left:18px}
+/* 提示 */
+.disclaimer{color:var(--muted);font-size:11px;padding:8px 0;text-align:center}
+@media(max-width:900px){.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr}.g2{grid-template-columns:1fr}.topnav{overflow-x:auto}.ai-side{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="logo"><span class="dot"></span>雨霖量化</div>
+    <div class="topnav">
+      <button class="active" data-tab="hangqing">行情</button>
+      <button data-tab="xuangu">选股</button>
+      <button data-tab="zixuan">自选</button>
+      <button data-tab="huice">回测</button>
+      <button data-tab="yujing">预警</button>
+      <button data-tab="ai">雨森AI</button>
+    </div>
+    <div class="user-chip">雨森量化</div>
+    <div class="balance"><span class="coin"></span>1,780</div>
+  </div>
+  <div class="content" id="content"></div>
+</div>
+<script>
+// ============ 真实数据接入 ============
+// 同源部署时 API_BASE 留空；本地预览时指向后端
+const API_BASE = (location.protocol === 'minis:' || location.hostname === '') ? 'http://127.0.0.1:8080' : '';
+async function api(path){
+  try{const r=await fetch(API_BASE+path);const j=await r.json();return j.ok?j.data:null}catch(e){return null}
+}
+const D={ /* 初始为演示数据，加载真实数据后覆盖 */
+  indices:[
+    {name:'上证指数',val:'3533.79',chg:'-0.43%',down:true},
+    {name:'创业板指',val:'2212.13',chg:'-1.23%',down:true},
+    {name:'深证成指',val:'11,231',chg:'-0.81%',down:true},
+    {name:'科创50',val:'1,045',chg:'+0.17%',down:false}
+  ],
+  market:{up:313,down:5236,flat:23,zt:28,dt:58,total:5572},
+  funds:{main:'-516.9亿',north:'+2212.13',vol:'14311亿'},
+  sectors:[
+    {n:'煤炭行业',v:-1.59},{n:'农林牧渔',v:-1.37},{n:'供水供气',v:-1.33},
+    {n:'酿酒行业',v:0.10},{n:'金融行业',v:0.17},{n:'公路桥梁',v:-1.28}
+  ],
+  watch:[
+    {code:'301000',name:'肇民科技',price:'25.40',chg:'-4.58%'},
+    {code:'002668',name:'TCL智家',price:'9.39',chg:'+2.29%'},
+    {code:'002666',name:'德联集团',price:'9.39',chg:'+2.29%'},
+    {code:'601083',name:'锦江航运',price:'14.22',chg:'+3.42%'}
+  ],
+  pickResult:[
+    {code:'601083',name:'锦江航运',price:'14.22',chg:'+3.42%',amount:'2.99亿',ma20:'62.8',rsi:'13.49'}
+  ],
+  alerts:[
+    {name:'*ST仕净',code:'301030',price:'3.29',chg:'+14.24%',gap:'5.17%',type:'临界冲板',meta:'创业板·成交1.27亿'},
+    {name:'大丰实业',code:'603081',price:'9.79',chg:'+4.93%',gap:'4.80%',type:'炸板待回封',meta:'主板·成交2.17亿·炸板1次·首封11:26'},
+    {name:'高乐股份',code:'002348',price:'7.76',chg:'+7.78%',gap:'2.06%',type:'炸板待回封',meta:'主板·成交6.18亿·炸板2次'},
+    {name:'北纬科技',code:'002148',price:'10.06',chg:'+8.17%',gap:'1.69%',type:'炸板待回封',meta:'主板·成交22.89亿·炸板2次'},
+    {name:'勤上股份',code:'002638',price:'4.48',chg:'+8.21%',gap:'1.56%',type:'接近涨停',meta:'主板·成交3.41亿'}
+  ],
+  holdings:[
+    {name:'四会富仕',code:'300852',price:'50.85',chg:'+7.44%',pnl:'-1.88%',status:'跌破MA15'},
+    {name:'九阳股份',code:'002242',price:'28.96',chg:'-7.21%',pnl:'-3%',status:'触发止损线'}
+  ]
+};
+const f=(n)=>Number(n).toLocaleString();
+function renderHangqing(){return `
+<div class="grid g4" style="margin-bottom:14px">
+  ${D.indices.map(i=>`<div class="card"><div class="muted">${i.name}</div><div class="big ${i.down?'down':'up'}" style="margin-top:6px">${i.val}</div><div class="${i.down?'down':'up'}">${i.chg}</div></div>`).join('')}
+</div>
+<div class="grid g2">
+  <div class="card">
+    <h3><span class="bar"></span>涨跌分布 · 全市场 ${f(D.market.total)} 只 实时</h3>
+    <div class="between" style="margin:14px 0">
+      <div><div class="muted">上涨</div><div class="up big">${D.market.up}</div></div>
+      <div><div class="muted">下跌</div><div class="down big">${D.market.down}</div></div>
+      <div><div class="muted">涨停</div><div class="up big">${D.market.zt}</div></div>
+      <div><div class="muted">跌停</div><div class="down big">${D.market.dt}</div></div>
+    </div>
+    <div class="dist">
+      <div style="width:${D.market.up/D.market.total*100}%;background:var(--up)"></div>
+      <div style="width:${D.market.flat/D.market.total*100}%;background:var(--muted)"></div>
+      <div style="width:${D.market.down/D.market.total*100}%;background:var(--down)"></div>
+    </div>
+    <div class="dist-labels"><span class="up">涨 ${D.market.up}</span><span class="muted">平 ${D.market.flat}</span><span class="down">跌 ${D.market.down}</span></div>
+    <h3 style="margin-top:20px"><span class="bar"></span>大盘资金</h3>
+    <div class="grid g3" style="margin-top:10px">
+      <div><div class="muted">主力净额</div><div class="down">${D.funds.main}</div></div>
+      <div><div class="muted">成交额</div><div>${D.funds.vol}</div></div>
+      <div><div class="muted">北向资金</div><div class="up">${D.funds.north}</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3><span class="bar"></span>热门板块 · 行业涨跌榜</h3>
+    ${D.sectors.map(s=>`<div class="sector"><span class="name">${s.n}</span><span class="bar"><i style="width:${Math.abs(s.v)*40}%;background:${s.v>=0?'var(--up)':'var(--down)'}"></i></span><span class="val ${s.v>=0?'up':'down'}">${s.v>0?'+':''}${s.v}%</span></div>`).join('')}
+    <h3 style="margin-top:22px"><span class="bar"></span>我的自选 · 入选历史票榜</h3>
+    <table style="margin-top:8px"><tr><th>名称/代码</th><th>最新价</th><th>涨跌幅</th></tr>
+    ${D.watch.slice(0,3).map(w=>`<tr><td>${w.name}<div class="code">${w.code}</div></td><td>${w.price}</td><td class="${w.chg[0]==='+'?'up':'down'}">${w.chg}</td></tr>`).join('')}
+    </table>
+  </div>
+</div>`}
+function renderXuangu(){return `
+<div class="card" style="margin-bottom:14px">
+  <div class="between">
+    <div><h3><span class="bar"></span>智能选股 · 全市场 5500+ 只逐一扫描技术信号</h3></div>
+    <div class="row"><select><option>林公子弱转强</option><option>标准N字</option><option>首板回封</option></select><button class="btn" id="startPick">开始选股</button></div>
+  </div>
+  <div class="cond" style="margin-top:12px"><b>选股条件：</b>标准N字弱转强：涨幅 2%~5% + 量比≥1.3 + 换手>3.5% + 总市值≥60亿 + 量能曲线 MA5/MA10≥0.35上行，回调缩量不破位后放量再起</div>
+</div>
+<div class="card">
+  <div class="between"><h3><span class="bar"></span>选股结果</h3><span class="muted">林公子策略 · 全市场 5,584 只（可交易 5,380 · 剔除 ST 254 · 初筛 22）命中 <b class="up">1</b> · 用时 3s</span></div>
+  <table style="margin-top:10px"><tr><th>名称/代码</th><th>最新价</th><th>涨跌幅</th><th>成交额</th><th>MA20</th><th>RSI14</th><th>自选</th></tr>
+  ${D.pickResult.map(p=>`<tr><td>${p.name}<div class="code">${p.code}</div></td><td>${p.price}</td><td class="up">${p.chg}</td><td>${p.amount}</td><td>${p.ma20}</td><td>${p.rsi}</td><td><button class="btn sm ghost">+自选</button></td></tr>`).join('')}
+  </table>
+  <div class="disclaimer">选股结果为技术信号初选，非投资建议，请结合基本面与风险自行决策。</div>
+</div>`}
+function renderZixuan(){return `
+<div class="card">
+  <div class="between"><h3><span class="bar"></span>我的自选 · 入选历史票榜</h3><button class="btn sm ghost">+ 添加自选</button></div>
+  <table style="margin-top:10px"><tr><th>名称/代码</th><th>最新价</th><th>涨跌幅</th><th>状态</th><th>操作</th></tr>
+  ${D.watch.map(w=>`<tr><td>${w.name}<div class="code">${w.code}</div></td><td>${w.price}</td><td class="${w.chg[0]==='+'?'up':'down'}">${w.chg}</td><td><span class="tag">观察中</span></td><td><button class="btn sm ghost">回测</button></td></tr>`).join('')}
+  </table>
+</div>`}
+function renderHuice(){return `
+<div class="grid g2">
+  <div class="card">
+    <div class="between"><h3><span class="bar"></span>TCL智家 002668 <span class="up">+2.29%</span></h3><div class="row"><button class="btn sm ghost active">分时图</button><button class="btn sm ghost">60分钟</button><button class="btn sm ghost">日K</button></div></div>
+    <div class="chart" id="kline"></div>
+    <div class="grid g4" style="margin-top:12px"><div><div class="muted">策略收益</div><div class="up big">+18.6%</div></div><div><div class="muted">最大回撤</div><div class="down">-6.2%</div></div><div><div class="muted">胜率</div><div>64%</div></div><div><div class="muted">交易次数</div><div>28</div></div></div>
+  </div>
+  <div class="card">
+    <h3><span class="bar"></span>策略回测 · 林公子弱转强</h3>
+    <div class="cond" style="margin-top:10px">回测区间：2026-01-01 至 2026-11-22<br>标的池：沪深A股 · 剔除ST · 市值≥60亿<br>信号：N字弱转强（放量突破 + 缩量回踩 + 再起）</div>
+    <table style="margin-top:16px"><tr><th>指标</th><th>数值</th></tr><tr><td>年化收益</td><td class="up">+42.3%</td></tr><tr><td>夏普比率</td><td>2.18</td></tr><tr><td>盈亏比</td><td>2.4</td></tr><tr><td>平均持仓</td><td>3.2 天</td></tr></table>
+  </div>
+</div>`}
+function renderYujing(){return `
+<div class="grid g2">
+  <div class="card">
+    <h3><span class="bar"></span>涨停预警 · 临界冲板 / 炸板待回封</h3>
+    <div class="muted" style="font-size:11px;margin:8px 0">股票按交易所口径只算「今日涨停又打开」，且只保留距涨停不超过本板块幅度一半的（主板5%、创业板/科创板10%）；预警只反映价差与是否过板，不含基本面与资金意图判断，不构成投资建议。</div>
+    ${D.alerts.map(a=>`<div class="alert-item"><div class="top"><div><b>${a.name}</b> <span class="code">${a.code}</span> <span class="${a.chg[0]==='+'?'up':'down'}">${a.chg}</span></div><span class="tag red">${a.type}</span></div><div class="meta">${a.meta} · 还差 ${a.gap} 到涨停</div></div>`).join('')}
+  </div>
+  <div class="card">
+    <div class="between"><h3><span class="bar"></span>持仓盯盘</h3><div class="row"><span class="toggle on" onclick="this.classList.toggle('on')"><i></i></span><span>盯盘开关</span></div></div>
+    <div class="muted" style="font-size:11px;margin:8px 0">每2分钟自动扫一次（9:25-11:30、13:00-15:05）；休市只刷新状态、不发提醒。盯的是你的实盘持仓：浮亏触线、当日急跌、跌破MA15、接近跌停都会提醒。</div>
+    <div class="grid g3" style="margin:14px 0">
+      <div class="cond">深亏提醒线<br><b class="down">-5%</b></div>
+      <div class="cond">当日跌幅提醒线<br><b class="down">-3%</b></div>
+      <div class="cond">跌破 MA15 提醒<br><b>已开启</b></div>
+    </div>
+    ${D.holdings.map(h=>`<div class="watch-row"><div><b>${h.name}</b> <span class="code">${h.code}</span><div class="muted">${h.status}</div></div><div style="text-align:right"><div class="${h.chg[0]==='+'?'up':'down'}">${h.price} ${h.chg}</div><div class="down">浮亏 ${h.pnl}</div></div></div>`).join('')}
+    <h3 style="margin-top:16px"><span class="bar"></span>提醒记录</h3>
+    <div class="muted" style="font-size:11px">11/20 13:35 九阳股份 触及 -3% 止损线<br>11/20 13:17 九阳股份 当日跌幅 -9.32%<br>11/20 14:42 四会富仕 跌破 MA15</div>
+  </div>
+</div>`}
+function renderAI(){return `
+<div class="ai-layout">
+  <div class="ai-side">
+    <button class="active">+ 新对话</button>
+    <div class="muted" style="margin:12px 0 6px;font-size:11px">主对话</div>
+    <button>帮我分析锦江航运</button><button>昨天涨停规律复盘</button><button>持仓四会富仕怎么看</button>
+    <div class="muted" style="margin:14px 0 6px;font-size:11px">工具</div>
+    <button>多角色深度分析</button><button>快速分析</button><button>亮剑模式（12环节）</button>
+    <div class="cond" style="margin-top:14px;font-size:10px">持续记忆 · 与你一起成长的投资驾驶舱</div>
+  </div>
+  <div class="ai-main">
+    <div class="ai-msgs">
+      <div class="msg ai"><h4>雨森AI · 多角色深度分析</h4>你好！我有 <b>12 个 agent</b> 为你分析：技术面 / 基本面 / 消息面 / 情绪资金 → 多空辩论 → 研究主管 → 交易员 → 三方风险 → 风险主管。输入股票代码（如 600519）开始分析，完整模式需 1-2 分钟，报告会直接写进当前对话。</div>
+      <div class="msg user">分析一下昨天的涨停规律</div>
+      <div class="msg ai"><h4>研究主管 · 复盘结论</h4><b>规律一：9:30-9:45 封板的票，当天封板率最高，且封单额普遍较大。</b>这批票的共同点是竞价高开 3%-7%，开盘后快速拉升封板。<br><br>11/18 开盘15分钟内封板：春光科技（09:30，封单4501万）、真视通（09:30，封单1.08亿）、武汉凡谷（09:30，封单1.23亿）、四川长虹（09:35，封单2.10亿）、北纬科技（09:30）、动力源（09:30）、澳柯玛（09:30）、双环科技（09:42）、创益通（09:45）。<br><br><b>结论：</b>竞价高开 + 早盘快速封板，是强势首板的核心特征。</div>
+    </div>
+    <div class="ai-input"><input placeholder="问我行情、股票代码，如 600519"><button class="btn">发送</button></div>
+    <div class="disclaimer">分析由多角色AI生成，仅供参考，不构成投资建议。</div>
+  </div>
+</div>`}
+const renders={hangqing:renderHangqing,xuangu:renderXuangu,zixuan:renderZixuan,huice:renderHuice,yujing:renderYujing,ai:renderAI};
+function drawKline(){const el=document.getElementById('kline');if(!el)return;
+  const pts=[];for(let i=0;i<60;i++){pts.push(80+Math.sin(i/5)*30+Math.sin(i/13)*20+(Math.random()-.5)*8)}
+  const path=pts.map((y,i)=>`${i?'L':'M'} ${i/59*100} ${100-y/2}`).join(' ');
+  el.innerHTML=`<svg viewBox="0 0 100 100" preserveAspectRatio="none"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#58a6ff" stop-opacity=".3"/><stop offset="1" stop-color="#58a6ff" stop-opacity="0"/></linearGradient></defs><path d="${path} L 100 100 L 0 100 Z" fill="url(#g)"/><path d="${path}" fill="none" stroke="#58a6ff" stroke-width="0.7"/></svg>`;
+}
+async function loadRealData(tab){
+  if(tab==='hangqing'){
+    const m=await api('/api/market');
+    if(m){D.market={...D.market,...m};D.indices=[{name:'上证指数',val:'实时',chg:m.up>m.down?'+':'-',down:m.up<=m.down},{name:'创业板指',val:String(m.total),chg:'只',down:false},{name:'涨/跌',val:m.up+'/'+m.down,chg:'',down:false},{name:'成交额',val:m.amount,chg:'',down:false}];show(tab)}
+  }else if(tab==='xuangu'){
+    const s=await api('/api/select');
+    if(s&&s.results){D.pickResult=s.results.map(x=>({code:x.code,name:x.name,price:String(x.price),chg:('+' + x.chg.toFixed(2)+'%'),amount:x.amount,ma20:x.ma20,rsi:x.rsi14}));
+      D.scanInfo=`${s.strategy==='lin_gongzi'?'林公子策略':'策略'} · 全市场 ${f(s.scanned)} 只（可交易 ${f(s.tradable)} · 剔除ST ${s.excluded_st} · 初筛 ${f(s.prescreen)}）命中 <b class="up">${s.hits}</b> · 用时 3s`;show(tab)}
+  }else if(tab==='yujing'){
+    const a=await api('/api/alerts');
+    if(a&&a.length){D.alerts=a.map(x=>({name:x.name,code:x.code,price:String(x.price),chg:('+'+x.chg.toFixed(2)+'%'),gap:String(x.gap),type:x.type,meta:x.meta}));show(tab)}
+  }else if(tab==='zixuan'){
+    const l=await api('/api/stocks');
+    if(l&&l.length){D.watch=l.slice(0,5).map(x=>({code:x.code,name:x.name,price:String(x.price),chg:(x.chg>=0?'+':'')+x.chg.toFixed(2)+'%'}));show(tab)}
+  }
+}
+let loading={};
+function show(tab){
+  document.querySelectorAll('.topnav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  document.getElementById('content').innerHTML=(renders[tab]||renderHangqing)();
+  if(tab==='huice')drawKline();
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>show(b.dataset.tab));
+  if(!loading[tab]){loading[tab]=true;loadRealData(tab)}
+}
+// 选股结果统计条用真实数据（替换 renders 对象里的引用）
+const _rx=renders.xuangu;
+renders.xuangu=function(){let h=_rx();if(D.scanInfo)h=h.replace(/林公子策略 · 全市场[^<]*命中 <b class="up">1<\/b> · 用时 3s/,D.scanInfo);return h};
+show('hangqing');
+</script>
+</body>
+</html>
